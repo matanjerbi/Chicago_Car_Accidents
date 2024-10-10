@@ -100,3 +100,24 @@ def sum_crash_by_area_time(area, date, period):
         return jsonify({"error": f"Database operation failed: {str(of)}"}), 500
     except Exception as e:
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+@crash_bp.route('/cause/<beat>', methods=['GET'])
+def group_accidents_by_prim_cause(beat):
+    try:
+        beat = int(beat)
+        pipeline = [
+            {'$match': {'BEAT_OF_OCCURRENCE': beat}},
+            {'$group': {
+                'reason': "$PRIM_CONTRIBUTORY_CAUSE",
+                'total_accidents': {'$sum': 1}
+            }},
+            {'$sort': {'total_accidents': -1}}  # מיון לפי מספר התאונות בסדר יורד
+        ]
+
+        result = list(db.crashes.aggregate(pipeline))
+
+        return jsonify(result), 200
+
+    except ValueError:
+        return jsonify({"error": "Invalid beat number. Must be an integer."}), 400
+
