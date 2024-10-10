@@ -121,3 +121,35 @@ def group_accidents_by_prim_cause(beat):
     except ValueError:
         return jsonify({"error": "Invalid beat number. Must be an integer."}), 400
 
+
+@crash_bp.route('/stat_injurise/<beat>', methods=['GET'])
+def stat_injurise(beat):
+    try:
+        beat = int(beat)
+        pipeline = [
+            {"$match": {"BEAT_OF_OCCURRENCE": beat}},
+            {"$group": {
+                "_id": '$BEAT_OF_OCCURRENCE',
+                "total_injuries": {"$sum": "$INJURIES.INJURIES_TOTAL"},
+                "fatal_injuries": {"$sum": "$INJURIES.INJURIES_FATAL"},
+                "not_fatal_injuries": {"$sum": "$INJURIES.INJURIES_NOT_FATAL"}
+            }}
+        ]
+        result = list(db.crashes.aggregate(pipeline))
+        if not result:
+            return jsonify({"message": f"No data found for beat {beat}"}), 404
+        return jsonify(result[0]), 200
+    except ValueError:
+        return jsonify({"error": "Invalid beat number. Must be an integer."}), 400
+    except OperationFailure as e:
+        return jsonify({"error": f"Database operation failed: {str(e)}"}), 500
+    except Exception as e:
+        print(f"Error in stat_injurise: {str(e)}")  # For debugging
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+
+
+
+
+
+
